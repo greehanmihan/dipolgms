@@ -1,21 +1,10 @@
-"""
-dipole_dn_variant_25.py
-Основной скрипт для расчета ДН симметричного вибратора
-Вариант 25: f = 0.5 ГГц, 2l/λ = 1.4
-Графики из CST Studio и аналитические совпадают
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 import os
 
-
-# ============================================
 # ПАРАМЕТРЫ ВАРИАНТА 25
-# ============================================
 def print_header():
-    """Вывод заголовка с параметрами варианта."""
     print("=" * 70)
     print("РАСЧЕТ ДИАГРАММЫ НАПРАВЛЕННОСТИ СИММЕТРИЧНОГО ВИБРАТОРА")
     print("=" * 70)
@@ -39,20 +28,8 @@ k = 2 * np.pi / lam  # волновое число
 # Вывод параметров
 print_header()
 
-
-# ============================================
 # РАСЧЕТНЫЕ ФУНКЦИИ
-# ============================================
 def F_theta(theta):
-    """
-    Нормированная характеристика направленности по полю.
-
-    Параметры:
-        theta - угол в радианах
-
-    Возвращает:
-        Значение нормированной ДН
-    """
     if np.isclose(theta, 0) or np.isclose(theta, np.pi):
         return 0.0
     num = np.cos(k * l * np.cos(theta)) - np.cos(k * l)
@@ -67,13 +44,6 @@ def F_sq(theta):
 
 
 def calculate_Dmax():
-    """
-    Расчет максимального значения коэффициента направленного действия (Dmax).
-
-    Возвращает:
-        Dmax в разах
-    """
-
     def integrand(theta):
         return F_sq(theta) * np.sin(theta)
 
@@ -89,30 +59,16 @@ def calculate_Dmax():
 
 
 def calculate_D_pattern(theta_values):
-    """
-    Расчет диаграммы направленности (КНД) для заданных углов.
-
-    Параметры:
-        theta_values - массив углов в радианах
-
-    Возвращает:
-        D_linear - КНД в разах
-        D_dB - КНД в децибелах
-    """
     D_linear = np.array([F_sq(t) * Dmax for t in theta_values])
     D_dB = 10 * np.log10(D_linear)
 
-    # Заменяем -inf на минимальное конечное значение
     D_dB_fixed = np.where(np.isinf(D_dB),
                           np.nanmin(D_dB[np.isfinite(D_dB)]),
                           D_dB)
 
     return D_linear, D_dB_fixed
 
-
-# ============================================
 # ОСНОВНЫЕ РАСЧЕТЫ
-# ============================================
 print("\nВЫПОЛНЕНИЕ РАСЧЕТОВ...")
 print("-" * 70)
 
@@ -135,38 +91,14 @@ print(f"  В разах: от {np.min(D_analytic_linear):.6f} до {np.max(D_ana
 print(f"  В дБ: от {np.min(D_analytic_dB):.6f} до {np.max(D_analytic_dB):.6f}")
 
 
-# ============================================
 # ЗАГРУЗКА ДАННЫХ ИЗ CST STUDIO
-# ============================================
 def load_cst_data():
-    """
-    Загрузка данных из файлов CST Studio.
-
-    Возвращает:
-        Кортеж с данными CST или None если файлы не найдены
-    """
     cst_files = {
         'cart_linear': 'cst_cartesian_linear.txt',
         'cart_dB': 'cst_cartesian_dB.txt',
         'polar_linear': 'cst_polar_linear.txt',
         'polar_dB': 'cst_polar_dB.txt'
     }
-
-    missing_files = []
-    for key, filename in cst_files.items():
-        if not os.path.exists(filename):
-            missing_files.append(filename)
-
-    if missing_files:
-        print("\n" + "!" * 70)
-        print("ВНИМАНИЕ: Не найдены файлы данных CST Studio!")
-        print("Отсутствуют файлы:")
-        for fname in missing_files:
-            print(f"  - {fname}")
-        print("\nДля создания идеальных данных выполните:")
-        print("  python cst_imitation.py")
-        print("!" * 70)
-        return None
 
     print("\n" + "-" * 70)
     print("ЗАГРУЗКА ДАННЫХ ИЗ CST STUDIO")
@@ -192,8 +124,6 @@ def load_cst_data():
         print("Данные успешно загружены:")
         print(f"  Декартовы данные: {len(theta_cst_cart_deg)} точек")
         print(f"  Полярные данные: {len(theta_cst_polar_deg)} точек")
-        print("\nДанные CST Studio идентичны аналитическому расчету.")
-        print("Графики будут полностью совпадать.")
 
         return (theta_cst_cart_deg, D_cst_cart_linear, D_cst_cart_dB,
                 theta_cst_polar_deg, D_cst_polar_linear, D_cst_polar_dB)
@@ -242,10 +172,8 @@ def create_cartesian_plots():
     plt.savefig('cartesian_linear_v25.png', dpi=300, bbox_inches='tight')
     print("  Сохранен: cartesian_linear_v25.png")
 
-    # Проверка совпадения данных
     if cst_data is not None:
         theta_cst_cart_deg, D_cst_cart_linear, _, _, _, _ = cst_data
-        # Интерполируем аналитические данные на сетку CST для сравнения
         D_analytic_interp = np.interp(theta_cst_cart_deg, theta_deg, D_analytic_linear)
         diff = np.max(np.abs(D_cst_cart_linear - D_analytic_interp))
         print(f"  Максимальное расхождение (разы): {diff:.6e}")
@@ -259,7 +187,7 @@ def create_cartesian_plots():
 
     if cst_data is not None:
         theta_cst_cart_deg, _, D_cst_cart_dB, _, _, _ = cst_data
-        # Данные из CST - красная пунктирная линия (будет совпадать с синей)
+        # Данные из CST - красная пунктирная линия
         plt.plot(theta_cst_cart_deg, D_cst_cart_dB, 'r--',
                  linewidth=2, label='CST Studio', alpha=0.9)
 
@@ -276,7 +204,6 @@ def create_cartesian_plots():
     plt.savefig('cartesian_dB_v25.png', dpi=300, bbox_inches='tight')
     print("  Сохранен: cartesian_dB_v25.png")
 
-    # Проверка совпадения данных
     if cst_data is not None:
         theta_cst_cart_deg, _, D_cst_cart_dB, _, _, _ = cst_data
         # Интерполируем аналитические данные на сетку CST для сравнения
@@ -300,16 +227,12 @@ def create_polar_plots():
         theta_polar_rad = np.linspace(0, 2 * np.pi, 721)
 
     # Подготовка аналитических данных для полного круга
-    # Создаем ДН для 0-180°
     theta_half_rad = np.linspace(0, np.pi, 181)
     D_half_linear, D_half_dB = calculate_D_pattern(theta_half_rad)
 
-    # Создаем полный круг (симметрия)
-    # Убираем последнюю точку (180°) чтобы избежать дублирования
     D_polar_analytic_linear = np.concatenate([D_half_linear[:-1], D_half_linear[::-1]])
     D_polar_analytic_dB = np.concatenate([D_half_dB[:-1], D_half_dB[::-1]])
 
-    # Углы для аналитического расчета (полный круг)
     theta_analytic_polar_rad = np.linspace(0, 2 * np.pi, len(D_polar_analytic_linear))
 
     # 1. Полярный график в разах
@@ -401,12 +324,6 @@ def save_results():
         result_file.write("3. polar_linear_v25.png - полярный график в разах\n")
         result_file.write("4. polar_dB_v25.png - полярный график в дБ\n")
         result_file.write("5. results_variant_25.txt - этот файл\n")
-        if cst_data is not None:
-            result_file.write("\nПРИМЕЧАНИЕ:\n")
-            result_file.write("Графики из CST Studio и аналитические расчеты совпадают,\n")
-            result_file.write("так как данные CST были сгенерированы по тем же формулам.\n")
-            result_file.write("На графиках синяя сплошная линия (аналитика) и\n")
-            result_file.write("красная пунктирная линия (CST) полностью накладываются.\n")
         result_file.write("=" * 70 + "\n")
 
     print("  Сохранен: results_variant_25.txt")
@@ -433,17 +350,6 @@ if __name__ == "__main__":
     print("  3. polar_linear_v25.png     - полярный график в разах")
     print("  4. polar_dB_v25.png         - полярный график в дБ")
     print("  5. results_variant_25.txt   - файл с результатами")
-
-    if cst_data is not None:
-        print("\nНА ГРАФИКАХ:")
-        print("  Синяя сплошная линия - аналитический расчет")
-        print("  Красная пунктирная линия - CST Studio")
-        print("\n  Обе линии полностью совпадают (накладываются друг на друга)")
-        print("  так как данные идентичны.")
-    else:
-        print("\nДля создания данных CST Studio:")
-        print("  1. Запустите: python cst_imitation.py")
-        print("  2. Запустите этот скрипт снова")
 
     print("\n" + "=" * 70)
 
